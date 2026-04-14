@@ -25,6 +25,15 @@ function IconCart() {
   )
 }
 
+function IconGrid() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+    </svg>
+  )
+}
+
 function IconPlus() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -68,6 +77,8 @@ function IconLoader() {
   )
 }
 
+type MobileTab = 'produk' | 'keranjang'
+
 export default function KasirPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -75,6 +86,8 @@ export default function KasirPage() {
   const [search, setSearch] = useState('')
   const [selectedCat, setSelectedCat] = useState('')
   const [checkoutOpen, setCheckoutOpen] = useState(false)
+  // Tab aktif untuk mobile
+  const [mobileTab, setMobileTab] = useState<MobileTab>('produk')
 
   const {
     items,
@@ -117,201 +130,258 @@ export default function KasirPage() {
   const getCartItem = (productId: string) =>
     items.find((i) => i.product.id === productId)
 
-  return (
-    <div className="flex h-screen overflow-hidden">
-      {/* ── Kiri: Daftar Produk ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Search & Filter */}
-        <div className="p-4 bg-white border-b border-gray-100 space-y-3">
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <IconSearch />
-            </span>
-            <input
-              type="text"
-              placeholder="Cari produk atau scan barcode..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="input-field pl-9"
-            />
-          </div>
+  // Saat tambah produk di mobile, otomatis tampilkan notif tapi tetap di tab produk
+  const handleAddItem = (product: Product) => {
+    addItem(product)
+  }
 
-          {/* Kategori tabs */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+  // Panel Daftar Produk
+  const ProdukPanel = (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Search & Filter */}
+      <div className="p-4 bg-white border-b border-gray-100 space-y-3">
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <IconSearch />
+          </span>
+          <input
+            type="text"
+            placeholder="Cari produk atau scan barcode..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input-field pl-9"
+          />
+        </div>
+
+        {/* Kategori tabs */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+          <button
+            onClick={() => setSelectedCat('')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+              !selectedCat
+                ? 'bg-black text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Semua
+          </button>
+          {categories.map((cat) => (
             <button
-              onClick={() => setSelectedCat('')}
+              key={cat.id}
+              onClick={() =>
+                setSelectedCat(selectedCat === cat.id ? '' : cat.id)
+              }
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                !selectedCat
+                selectedCat === cat.id
                   ? 'bg-black text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              Semua
+              {cat.name}
             </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() =>
-                  setSelectedCat(selectedCat === cat.id ? '' : cat.id)
-                }
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                  selectedCat === cat.id
-                    ? 'bg-black text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
+      </div>
 
-        {/* Grid Produk */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {loading ? (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              <IconLoader />
+      {/* Grid Produk */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {loading ? (
+          <div className="flex items-center justify-center h-full text-gray-400">
+            <IconLoader />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="text-gray-300 mb-3">
+              <IconBox />
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="text-gray-300 mb-3">
-                <IconBox />
-              </div>
-              <p className="text-gray-500 font-medium">Tidak ada produk</p>
-              <p className="text-gray-400 text-sm">
-                Coba ubah pencarian atau filter kategori
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
-              {filtered.map((product) => {
-                const inCart = getCartItem(product.id)
-                return (
-                  <div
-                    key={product.id}
-                    onClick={() => addItem(product)}
-                    className={`card p-3 cursor-pointer transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 ${
-                      inCart ? 'ring-2 ring-black' : ''
-                    }`}
-                  >
-                    <div className="w-full aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center text-gray-400">
-                      <IconBox />
-                    </div>
-                    <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2 mb-1">
-                      {product.name}
-                    </p>
-                    <p className="text-sm font-bold">
-                      {formatRupiah(product.price)}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Stok: {product.stock}
-                    </p>
-                    {inCart && (
-                      <div className="mt-2 bg-black text-white text-xs rounded-md px-2 py-1 text-center font-medium">
-                        {inCart.quantity} di keranjang
-                      </div>
-                    )}
+            <p className="text-gray-500 font-medium">Tidak ada produk</p>
+            <p className="text-gray-400 text-sm">
+              Coba ubah pencarian atau filter kategori
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+            {filtered.map((product) => {
+              const inCart = getCartItem(product.id)
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => handleAddItem(product)}
+                  className={`card p-3 cursor-pointer transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 ${
+                    inCart ? 'ring-2 ring-black' : ''
+                  }`}
+                >
+                  <div className="w-full aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center text-gray-400">
+                    <IconBox />
                   </div>
-                )
-              })}
-            </div>
+                  <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2 mb-1">
+                    {product.name}
+                  </p>
+                  <p className="text-sm font-bold">
+                    {formatRupiah(product.price)}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Stok: {product.stock}
+                  </p>
+                  {inCart && (
+                    <div className="mt-2 bg-black text-white text-xs rounded-md px-2 py-1 text-center font-medium">
+                      {inCart.quantity} di keranjang
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  // Panel Keranjang
+  const KeranjangPanel = (
+    <div className="flex flex-col h-full">
+      {/* Header keranjang — hanya tampil di desktop */}
+      <div className="hidden md:block p-4 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold flex items-center gap-2">
+            <IconCart />
+            Keranjang
+          </h2>
+          {getItemCount() > 0 && (
+            <span className="bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+              {getItemCount()}
+            </span>
           )}
         </div>
       </div>
 
-      {/* ── Kanan: Keranjang ── */}
-      <div className="w-80 xl:w-96 bg-white border-l border-gray-100 flex flex-col shrink-0">
-        {/* Header keranjang */}
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold flex items-center gap-2">
+      {/* Item keranjang */}
+      <div className="flex-1 overflow-y-auto">
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-6">
+            <div className="text-gray-200 mb-3">
               <IconCart />
-              Keranjang
-            </h2>
-            {getItemCount() > 0 && (
-              <span className="bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                {getItemCount()}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Item keranjang */}
-        <div className="flex-1 overflow-y-auto">
-          {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-6">
-              <div className="text-gray-200 mb-3">
-                <IconCart />
-              </div>
-              <p className="text-gray-400 text-sm">Keranjang kosong</p>
-              <p className="text-gray-300 text-xs mt-1">
-                Pilih produk untuk memulai transaksi
-              </p>
             </div>
-          ) : (
-            <div className="p-3 space-y-2">
-              {items.map((item) => (
-                <div
-                  key={item.product.id}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-gray-50"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {item.product.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatRupiah(item.product.price)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() =>
-                        updateQuantity(item.product.id, item.quantity - 1)
-                      }
-                      className="w-6 h-6 rounded-md bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
-                    >
-                      <IconMinus />
-                    </button>
-                    <span className="w-6 text-center text-sm font-bold">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() =>
-                        updateQuantity(item.product.id, item.quantity + 1)
-                      }
-                      disabled={item.quantity >= item.product.stock}
-                      className="w-6 h-6 rounded-md bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-40"
-                    >
-                      <IconPlus />
-                    </button>
-                    <button
-                      onClick={() => removeItem(item.product.id)}
-                      className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-red-50 hover:text-red-600 text-gray-400 transition-colors ml-1"
-                    >
-                      <IconDelete />
-                    </button>
-                  </div>
+            <p className="text-gray-400 text-sm">Keranjang kosong</p>
+            <p className="text-gray-300 text-xs mt-1">
+              Pilih produk untuk memulai transaksi
+            </p>
+          </div>
+        ) : (
+          <div className="p-3 space-y-2">
+            {items.map((item) => (
+              <div
+                key={item.product.id}
+                className="flex items-center gap-3 p-3 rounded-xl bg-gray-50"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {item.product.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatRupiah(item.product.price)}
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer keranjang */}
-        <div className="p-4 border-t border-gray-100 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Total</span>
-            <span className="text-xl font-bold">
-              {formatRupiah(getTotalPrice())}
-            </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() =>
+                      updateQuantity(item.product.id, item.quantity - 1)
+                    }
+                    className="w-6 h-6 rounded-md bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                  >
+                    <IconMinus />
+                  </button>
+                  <span className="w-6 text-center text-sm font-bold">
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() =>
+                      updateQuantity(item.product.id, item.quantity + 1)
+                    }
+                    disabled={item.quantity >= item.product.stock}
+                    className="w-6 h-6 rounded-md bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-40"
+                  >
+                    <IconPlus />
+                  </button>
+                  <button
+                    onClick={() => removeItem(item.product.id)}
+                    className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-red-50 hover:text-red-600 text-gray-400 transition-colors ml-1"
+                  >
+                    <IconDelete />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-          <button
-            onClick={() => setCheckoutOpen(true)}
-            disabled={items.length === 0}
-            className="btn-primary w-full h-12 text-base disabled:opacity-40"
-          >
-            Bayar Sekarang
-          </button>
+        )}
+      </div>
+
+      {/* Footer keranjang */}
+      <div className="p-4 border-t border-gray-100 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-600">Total</span>
+          <span className="text-xl font-bold">
+            {formatRupiah(getTotalPrice())}
+          </span>
+        </div>
+        <button
+          onClick={() => setCheckoutOpen(true)}
+          disabled={items.length === 0}
+          className="btn-primary w-full h-12 text-base disabled:opacity-40"
+        >
+          Bayar Sekarang
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+
+      {/* ── MOBILE: Tab Bar di atas ── */}
+      <div className="md:hidden flex border-b border-gray-200 bg-white shrink-0">
+        <button
+          onClick={() => setMobileTab('produk')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+            mobileTab === 'produk'
+              ? 'text-black border-b-2 border-black'
+              : 'text-gray-400'
+          }`}
+        >
+          <IconGrid />
+          Produk
+        </button>
+        <button
+          onClick={() => setMobileTab('keranjang')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors relative ${
+            mobileTab === 'keranjang'
+              ? 'text-black border-b-2 border-black'
+              : 'text-gray-400'
+          }`}
+        >
+          <IconCart />
+          Keranjang
+          {getItemCount() > 0 && (
+            <span className="absolute top-2 right-[calc(50%-28px)] bg-black text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold leading-none">
+              {getItemCount()}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ── MOBILE: Konten tab ── */}
+      <div className="md:hidden flex-1 overflow-hidden flex flex-col">
+        {mobileTab === 'produk' ? ProdukPanel : KeranjangPanel}
+      </div>
+
+      {/* ── DESKTOP: Side-by-side layout ── */}
+      <div className="hidden md:flex flex-1 overflow-hidden">
+        {/* Kiri: Daftar Produk */}
+        {ProdukPanel}
+
+        {/* Kanan: Keranjang */}
+        <div className="w-80 xl:w-96 bg-white border-l border-gray-100 flex flex-col shrink-0">
+          {KeranjangPanel}
         </div>
       </div>
 
