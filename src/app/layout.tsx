@@ -53,6 +53,24 @@ export default function RootLayout({
             },
           }}
         />
+         {/* Registrasi Service Worker */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw-custom.js')
+                    .then(function(reg) {
+                      console.log('SW registered:', reg.scope);
+                    })
+                    .catch(function(err) {
+                      console.log('SW failed:', err);
+                    });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   )
